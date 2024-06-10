@@ -1,3 +1,4 @@
+import { resolve } from "../../webpack.config";
 import StateToken from "./StateToken";
 
 export type StateTasks = Array<(token: StateToken) => Promise<void>>;
@@ -5,6 +6,8 @@ export type StateTasksQueue = Array<StateTasks>;
 
 export interface StateFlowHandler {
     cancel(): void;
+    suspend(): void;
+    resume(): void;
     next(flow: StateFlow): void;
 }
 
@@ -12,7 +15,8 @@ export default class StateFlow implements StateFlowHandler {
     private before?: (handler: StateFlowHandler) => void;
     private tasks?: StateTasksQueue | StateTasks;
     private after?: (handler: StateFlowHandler) => void;
-    private token?: StateToken;
+    private token: StateToken = new StateToken();
+    private suspendedFlow?: StateFlow;
 
     constructor(
         before?: (handler: StateFlowHandler) => void,
@@ -25,23 +29,35 @@ export default class StateFlow implements StateFlowHandler {
     }
 
     public cancel(): void {
-        const token = this.token;
-        this.drain();
-        token?.cancel();
+        this.token.cancel();
+    }
+
+    public suspend(): void {
+        this.token.suspend();
+    }
+
+    public resume(): void {
+        this.token.resume();
+        if (this.suspendedFlow) {
+            const suspendedFlow = this.suspendedFlow;
+            this.suspendedFlow = undefined;
+            suspendedFlow.launch();
+        }
     }
 
     public next(flow: StateFlow): void {
         this.cancel();
-        flow.launch();
+        if (this.token.suspended) {
+            this.suspendedFlow = flow;
+        } else {
+            flow.launch();
+        }
     }
 
     public async launch(): Promise<void> {
-        this.token = new StateToken();
+        if (this.token.cancelled) { return; }
         this.before?.(this);
-        if (!this.token || this.token.cancelled) {
-            this.drain();
-            return;
-        }
+        if (this.token.cancelled) { return; }
         if (this.tasks && this.tasks.length) {
             const dequeuedTasks: Array<Promise<void>> = [];
             if (this.areParallel(this.tasks)) {
@@ -53,11 +69,8 @@ export default class StateFlow implements StateFlowHandler {
             }
             await Promise.all(dequeuedTasks);
         }
-        if (this.token && !this.token.cancelled && this.after) {
-            this.drain();
+        if (!this.token.cancelled && this.after) {
             this.after(this);
-        } else {
-            this.drain();
         }
     }
 
@@ -65,21 +78,29 @@ export default class StateFlow implements StateFlowHandler {
         return Array.isArray(this.tasks[0]);
     }
 
-    private async dequeueTasks(tasks: StateTasks): Promise<void> {
+    private dequeueTasks = (tasks: StateTasks) => new Promise<void>((resolve) => {
+        let neddToResume: boolean = false;
         let token: StateToken;
-        this.token!.onCancel(() => token?.cancel());
-        while (tasks.length && !this.token?.cancelled) {
-            token = new StateToken();
-            const task = tasks.shift();
-            try {
-                await task(token);
-            } catch (e) { }
-            token = undefined;
+        const nextTask = async () => {
+            while (tasks.length && this.token && !this.token.cancelled) {
+                token = new StateToken();
+                const task = tasks.shift();
+                try {
+                    await task(token);
+                } catch (e) { }
+                if (token.suspended) {
+                    token = undefined;
+                    neddToResume = true;
+                    return;
+                }
+                neddToResume = false;
+                token = undefined;
+            }
+            resolve();
         }
-    }
-
-    private drain(): void {
-        this.tasks = undefined;
-        this.token = undefined;
-    }
+        this.token.onCancel(() => token?.cancel());
+        this.token.onSuspend(() => token?.suspend());
+        this.token.onResume(() => neddToResume && nextTask());
+        nextTask();
+    });
 }

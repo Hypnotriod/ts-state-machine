@@ -3,12 +3,12 @@ import StateFlow from "./stateMachine/StateFlow";
 
 const timeout = (ctx: StateToken, timeoutMs: number) => new Promise<void>((resolve, reject) => {
     const timeoutId = setTimeout(() => {
-        console.log(`Complete timeout ${timeoutId} for ${timeoutMs} ms`);
+        console.log(`Complete timeout ${timeoutId}`);
         resolve();
     }, timeoutMs);
     console.log(`Start timeout ${timeoutId} for ${timeoutMs} ms`);
     ctx.onCancel(() => {
-        console.log(`Cancel timeout ${timeoutId} for ${timeoutMs} ms`);
+        console.log(`Cancel timeout ${timeoutId}`);
         clearTimeout(timeoutId);
         reject();
     })
