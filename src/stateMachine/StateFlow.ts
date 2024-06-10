@@ -1,22 +1,15 @@
-import { resolve } from "../../webpack.config";
+import StateMachine, { StateFlowHandler } from "./StateMachine";
 import StateToken from "./StateToken";
 
 export type StateTasks = Array<(token: StateToken) => Promise<void>>;
 export type StateTasksQueue = Array<StateTasks>;
 
-export interface StateFlowHandler {
-    cancel(): void;
-    suspend(): void;
-    resume(): void;
-    next(flow: StateFlow): void;
-}
-
-export default class StateFlow implements StateFlowHandler {
+export default class StateFlow {
+    private listeners: { [key: string]: () => void } = {};
     private before?: (handler: StateFlowHandler) => void;
     private tasks?: StateTasksQueue | StateTasks;
     private after?: (handler: StateFlowHandler) => void;
     private token: StateToken = new StateToken();
-    private suspendedFlow?: StateFlow;
 
     constructor(
         before?: (handler: StateFlowHandler) => void,
@@ -28,8 +21,17 @@ export default class StateFlow implements StateFlowHandler {
         this.after = after;
     }
 
+    public get cancelled(): boolean {
+        return this.token?.cancelled;
+    }
+
+    public get suspended(): boolean {
+        return this.token?.suspended;
+    }
+
     public cancel(): void {
         this.token.cancel();
+        this.listeners = {};
     }
 
     public suspend(): void {
@@ -38,25 +40,19 @@ export default class StateFlow implements StateFlowHandler {
 
     public resume(): void {
         this.token.resume();
-        if (this.suspendedFlow) {
-            const suspendedFlow = this.suspendedFlow;
-            this.suspendedFlow = undefined;
-            suspendedFlow.launch();
-        }
     }
 
-    public next(flow: StateFlow): void {
-        this.cancel();
-        if (this.token.suspended) {
-            this.suspendedFlow = flow;
-        } else {
-            flow.launch();
-        }
+    public emit(signal: string): void {
+        this.listeners[signal]?.();
     }
 
-    public async launch(): Promise<void> {
+    public onSignal(signal: string, handler: () => void): void {
+        this.listeners[signal] = handler;
+    }
+
+    public async launch(stateMachine: StateMachine): Promise<void> {
         if (this.token.cancelled) { return; }
-        this.before?.(this);
+        this.before?.(stateMachine);
         if (this.token.cancelled) { return; }
         if (this.tasks && this.tasks.length) {
             const dequeuedTasks: Array<Promise<void>> = [];
@@ -70,7 +66,7 @@ export default class StateFlow implements StateFlowHandler {
             await Promise.all(dequeuedTasks);
         }
         if (!this.token.cancelled && this.after) {
-            this.after(this);
+            this.after(stateMachine);
         }
     }
 
@@ -93,8 +89,8 @@ export default class StateFlow implements StateFlowHandler {
                     neddToResume = true;
                     return;
                 }
-                neddToResume = false;
                 token = undefined;
+                neddToResume = false;
             }
             resolve();
         }

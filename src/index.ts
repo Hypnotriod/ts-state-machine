@@ -1,5 +1,6 @@
 import StateToken from "./stateMachine/StateToken";
 import StateFlow from "./stateMachine/StateFlow";
+import StateMachine from "./stateMachine/StateMachine";
 
 const timeout = (ctx: StateToken, timeoutMs: number) => new Promise<void>((resolve, reject) => {
     const timeoutId = setTimeout(() => {
@@ -14,9 +15,15 @@ const timeout = (ctx: StateToken, timeoutMs: number) => new Promise<void>((resol
     })
 });
 
+const stateMachine: StateMachine = new StateMachine();
+
 const flow1 = () => new StateFlow(
-    _ => {
+    handler => {
         console.log("Start Flow1");
+        handler.onSignal("Cancel", () => {
+            console.log("Cancel Flow1 by signal");
+            handler.cancel();
+        });
     },
     [
         t => timeout(t, 400),
@@ -31,9 +38,15 @@ const flow1 = () => new StateFlow(
 const flow2 = () => new StateFlow(
     async handler => {
         console.log("Start Flow2");
+        handler.onSignal("Cancel", () => {
+            console.log("Cancel Flow2 by signal");
+            handler.cancel();
+        });
         await timeout(new StateToken(), 2500);
-        handler.cancel();
-        console.log("Cancel Flow2");
+        if (!handler.cancelled) {
+            handler.cancel();
+            console.log("Cancel Flow2 by timeout");
+        }
     },
     [
         [
@@ -50,4 +63,8 @@ const flow2 = () => new StateFlow(
     },
 );
 
-flow1().launch();
+stateMachine.next(flow1());
+
+document.getElementById("btn-suspend").onclick = () => stateMachine.suspend();
+document.getElementById("btn-resume").onclick = () => stateMachine.resume();
+document.getElementById("btn-emit-cancel").onclick = () => stateMachine.emit("Cancel");
