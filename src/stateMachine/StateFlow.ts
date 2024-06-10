@@ -24,6 +24,12 @@ export default class StateFlow implements StateFlowHandler {
         this.after = after;
     }
 
+    public cancel(): void {
+        const token = this.token;
+        this.drain();
+        token?.cancel();
+    }
+
     public next(flow: StateFlow): void {
         this.cancel();
         flow.launch();
@@ -70,12 +76,6 @@ export default class StateFlow implements StateFlowHandler {
             } catch (e) { }
             token = undefined;
         }
-    }
-
-    public cancel(): void {
-        const token = this.token;
-        this.drain();
-        token?.cancel();
     }
 
     private drain(): void {
