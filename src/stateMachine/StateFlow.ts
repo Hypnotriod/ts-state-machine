@@ -1,4 +1,4 @@
-import StateToken from "./StateContext";
+import StateToken from "./StateToken";
 
 export type StateTasks = Array<(token: StateToken) => Promise<void>>;
 export type StateTasksQueue = Array<StateTasks>;

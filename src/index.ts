@@ -1,4 +1,4 @@
-import StateToken from "./stateMachine/StateContext";
+import StateToken from "./stateMachine/StateToken";
 import StateFlow from "./stateMachine/StateFlow";
 
 const timeout = (ctx: StateToken, timeoutMs: number) => new Promise<void>((resolve, reject) => {
@@ -19,8 +19,8 @@ const flow1 = () => new StateFlow(
         console.log("Start Flow1");
     },
     [
-        ctx => timeout(ctx, 400),
-        ctx => timeout(ctx, 500),
+        t => timeout(t, 400),
+        t => timeout(t, 500),
     ],
     handler => {
         console.log("End Flow1");
@@ -37,12 +37,12 @@ const flow2 = () => new StateFlow(
     },
     [
         [
-            ctx => timeout(ctx, 1000),
-            ctx => timeout(ctx, 1500),
+            t => timeout(t, 1000),
+            t => timeout(t, 1500),
         ],
         [
-            ctx => timeout(ctx, 500),
-            ctx => timeout(ctx, 2500),
+            t => timeout(t, 500),
+            t => timeout(t, 2500),
         ],
     ],
     _ => {
