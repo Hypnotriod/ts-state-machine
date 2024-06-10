@@ -32,9 +32,9 @@ export default class StateMachine implements StateFlowHandler {
 
     public resume(): void {
         if (this.suspendedFlow) {
-            this.suspendedFlow.launch(this);
             this.flow = this.suspendedFlow;
             this.suspendedFlow = undefined;
+            this.suspendedFlow.launch(this);
         } else {
             this.flow?.resume();
         }
@@ -53,8 +53,8 @@ export default class StateMachine implements StateFlowHandler {
         if (this.flow?.suspended) {
             this.suspendedFlow = flow;
         } else {
-            flow.launch(this);
             this.flow = flow;
+            flow.launch(this);
         }
     }
 }
