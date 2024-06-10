@@ -54,7 +54,7 @@ export default class StateMachine implements StateFlowHandler {
             this.suspendedFlow = flow;
         } else {
             this.flow = flow;
-            flow.launch(this);
+            this.flow.launch(this);
         }
     }
 }
