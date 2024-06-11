@@ -4,6 +4,7 @@ export default class StateToken {
     private resumeCallbacks: Array<() => void> = [];
     private _cancelled: boolean = false;
     private _suspended: boolean = false;
+    private _completed: boolean = false;
 
     public get cancelled(): boolean {
         return this._cancelled;
@@ -13,8 +14,17 @@ export default class StateToken {
         return this._suspended;
     }
 
+    public get completed(): boolean {
+        return this._completed;
+    }
+
+    public complete(): void {
+        this._completed = true;
+    }
+
     public cancel(): void {
         if (this._cancelled) { return; }
+        this.complete();
         this._cancelled = true;
         const cancelCallbacks = this.cancelCallbacks;
         this.drain();

@@ -3,6 +3,7 @@ import StateFlow from "./StateFlow";
 export interface StateFlowHandler {
     suspended: boolean;
     cancelled: boolean;
+    completed: boolean;
     cancel(): void;
     suspend(): void;
     resume(): void;
@@ -20,6 +21,10 @@ export default class StateMachine implements StateFlowHandler {
 
     public get suspended(): boolean {
         return this.flow?.suspended;
+    }
+
+    public get completed(): boolean {
+        return this.flow?.completed;
     }
 
     public cancel(): void {

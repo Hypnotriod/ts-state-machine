@@ -22,11 +22,15 @@ export default class StateFlow {
     }
 
     public get cancelled(): boolean {
-        return this.token?.cancelled;
+        return this.token.cancelled;
     }
 
     public get suspended(): boolean {
-        return this.token?.suspended;
+        return this.token.suspended;
+    }
+
+    public get completed(): boolean {
+        return this.token.completed;
     }
 
     public cancel(): void {
@@ -51,9 +55,9 @@ export default class StateFlow {
     }
 
     public async launch(stateMachine: StateMachine): Promise<void> {
-        if (this.token.cancelled) { return; }
+        if (this.token.completed) { return; }
         this.before?.(stateMachine);
-        if (this.token.cancelled) { return; }
+        if (this.token.completed) { return; }
         if (this.tasks && this.tasks.length) {
             const dequeuedTasks: Array<Promise<void>> = [];
             if (this.areParallel(this.tasks)) {
@@ -65,9 +69,10 @@ export default class StateFlow {
             }
             await Promise.all(dequeuedTasks);
         }
-        if (!this.token.cancelled && this.after) {
+        if (!this.token.completed && this.after) {
             this.after(stateMachine);
         }
+        this.token.complete();
     }
 
     private areParallel(tasks: StateTasksQueue | StateTasks): tasks is StateTasksQueue {
@@ -96,7 +101,10 @@ export default class StateFlow {
         }
         this.token.onCancel(() => token?.cancel());
         this.token.onSuspend(() => token?.suspend());
-        this.token.onResume(() => neddToResume && nextTask());
+        this.token.onResume(() => {
+            token?.resume();
+            neddToResume && nextTask();
+        });
         nextTask();
     });
 }
