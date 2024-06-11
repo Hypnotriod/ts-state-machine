@@ -1,20 +1,20 @@
 import StateMachine, { StateFlowHandler } from "./StateMachine";
 import StateToken, { StateTokenHandler } from "./StateToken";
 
-export type StateAction = (token: StateToken) => Promise<void>;
-export type StateActions = Array<StateAction>;
-export type ParallelStateActions = Array<StateActions>;
+export type FlowAction = (token: StateToken) => Promise<void>;
+export type FlowActions = Array<FlowAction>;
+export type ParallelFlowActions = Array<FlowActions>;
 
 export default class StateFlow {
     private listeners: { [key: string]: () => void } = {};
     private before?: (handler: StateFlowHandler) => void;
-    private actions?: ParallelStateActions | StateActions | StateAction;
+    private actions?: ParallelFlowActions | FlowActions | FlowAction;
     private after?: (handler: StateFlowHandler) => void;
     private token: StateTokenHandler = new StateTokenHandler();
 
     constructor(
         before?: (handler: StateFlowHandler) => void,
-        actions?: ParallelStateActions | StateActions | StateAction,
+        actions?: ParallelFlowActions | FlowActions | FlowAction,
         after?: (handler: StateFlowHandler) => void,
     ) {
         this.before = before;
@@ -78,15 +78,15 @@ export default class StateFlow {
         this.token.complete();
     }
 
-    private isSingleAction(actions: ParallelStateActions | StateActions | StateAction): actions is StateAction {
+    private isSingleAction(actions: ParallelFlowActions | FlowActions | FlowAction): actions is FlowAction {
         return actions instanceof Function;
     }
 
-    private areParallel(actions: ParallelStateActions | StateActions | StateAction): actions is ParallelStateActions {
+    private areParallel(actions: ParallelFlowActions | FlowActions | FlowAction): actions is ParallelFlowActions {
         return Array.isArray(this.actions) && Array.isArray(this.actions[0]);
     }
 
-    private dequeueActions = (actions: StateActions) => new Promise<void>((resolve) => {
+    private dequeueActions = (actions: FlowActions) => new Promise<void>((resolve) => {
         let neddToResume: boolean = false;
         let token: StateTokenHandler;
         const nextAction = async () => {
