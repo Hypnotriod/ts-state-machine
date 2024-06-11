@@ -1,23 +1,24 @@
 import StateMachine, { StateFlowHandler } from "./StateMachine";
 import StateToken, { StateTokenHandler } from "./StateToken";
 
-export type StateTasks = Array<(token: StateToken) => Promise<void>>;
-export type StateTasksQueue = Array<StateTasks>;
+export type StateAction = (token: StateToken) => Promise<void>;
+export type StateActions = Array<StateAction>;
+export type ParallelStateActions = Array<StateActions>;
 
 export default class StateFlow {
     private listeners: { [key: string]: () => void } = {};
     private before?: (handler: StateFlowHandler) => void;
-    private tasks?: StateTasksQueue | StateTasks;
+    private actions?: ParallelStateActions | StateActions | StateAction;
     private after?: (handler: StateFlowHandler) => void;
     private token: StateTokenHandler = new StateTokenHandler();
 
     constructor(
         before?: (handler: StateFlowHandler) => void,
-        tasks?: StateTasksQueue | StateTasks,
+        actions?: ParallelStateActions | StateActions | StateAction,
         after?: (handler: StateFlowHandler) => void,
     ) {
         this.before = before;
-        this.tasks = tasks;
+        this.actions = actions;
         this.after = after;
     }
 
@@ -58,16 +59,18 @@ export default class StateFlow {
         if (this.token.completed) { return; }
         this.before?.(stateMachine);
         if (this.token.completed) { return; }
-        if (this.tasks && this.tasks.length) {
-            const dequeuedTasks: Array<Promise<void>> = [];
-            if (this.areParallel(this.tasks)) {
-                for (const tasks of this.tasks) {
-                    dequeuedTasks.push(this.dequeueTasks(tasks));
+        if (this.actions && this.actions.length) {
+            const dequeuedActions: Array<Promise<void>> = [];
+            if (this.isSingleAction(this.actions)) {
+                dequeuedActions.push(this.dequeueActions([this.actions]));
+            } else if (this.areParallel(this.actions)) {
+                for (const actions of this.actions) {
+                    dequeuedActions.push(this.dequeueActions(actions));
                 }
             } else {
-                dequeuedTasks.push(this.dequeueTasks(this.tasks));
+                dequeuedActions.push(this.dequeueActions(this.actions));
             }
-            await Promise.all(dequeuedTasks);
+            await Promise.all(dequeuedActions);
         }
         if (!this.token.completed && this.after) {
             this.after(stateMachine);
@@ -75,19 +78,23 @@ export default class StateFlow {
         this.token.complete();
     }
 
-    private areParallel(tasks: StateTasksQueue | StateTasks): tasks is StateTasksQueue {
-        return Array.isArray(this.tasks[0]);
+    private isSingleAction(actions: ParallelStateActions | StateActions | StateAction): actions is StateAction {
+        return actions instanceof Function;
     }
 
-    private dequeueTasks = (tasks: StateTasks) => new Promise<void>((resolve) => {
+    private areParallel(actions: ParallelStateActions | StateActions | StateAction): actions is ParallelStateActions {
+        return Array.isArray(this.actions) && Array.isArray(this.actions[0]);
+    }
+
+    private dequeueActions = (actions: StateActions) => new Promise<void>((resolve) => {
         let neddToResume: boolean = false;
         let token: StateTokenHandler;
-        const nextTask = async () => {
-            while (tasks.length && this.token && !this.token.cancelled) {
+        const nextAction = async () => {
+            while (actions.length && this.token && !this.token.cancelled) {
                 token = new StateTokenHandler();
-                const task = tasks.shift();
+                const action = actions.shift();
                 try {
-                    await task(token);
+                    await action(token);
                 } catch (e) { }
                 if (token.suspended) {
                     token = undefined;
@@ -103,8 +110,8 @@ export default class StateFlow {
         this.token.onSuspend(() => token?.suspend());
         this.token.onResume(() => {
             token?.resume();
-            neddToResume && nextTask();
+            neddToResume && nextAction();
         });
-        nextTask();
+        nextAction();
     });
 }
