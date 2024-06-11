@@ -20,24 +20,25 @@ export interface StateFlowLogger {
 }
 
 export default class StateMachine implements StateFlowHandler {
-    private flow?: StateFlow;
+    private currentFlow?: StateFlow;
+    private nextFlow?: StateFlow;
     private suspendedFlow?: StateFlow;
     private _logger?: StateFlowLogger;
 
     public get currentStateName(): string {
-        return this.flow?.name || "";
+        return this.currentFlow?.name || "";
     }
 
     public get cancelled(): boolean {
-        return this.flow?.cancelled;
+        return this.currentFlow?.cancelled;
     }
 
     public get suspended(): boolean {
-        return this.flow?.suspended;
+        return this.currentFlow?.suspended;
     }
 
     public get completed(): boolean {
-        return this.flow?.completed;
+        return this.currentFlow?.completed;
     }
 
     public set logger(logger: StateFlowLogger) {
@@ -46,42 +47,56 @@ export default class StateMachine implements StateFlowHandler {
 
     public cancel(): void {
         this._logger?.onCancel(this.currentStateName);
-        this.flow?.cancel();
+        this.currentFlow?.cancel();
     }
 
     public suspend(): void {
         this._logger?.onSuspend(this.currentStateName);
-        this.flow?.suspend();
+        this.currentFlow?.suspend();
     }
 
     public resume(): void {
         if (this.suspendedFlow) {
-            this.flow = this.suspendedFlow;
+            this.nextFlow = this.suspendedFlow;
             this.suspendedFlow = undefined;
-            this._logger?.onResume(this.flow.name);
-            this.flow.launch(this);
+            this._logger?.onResume(this.nextFlow.name);
+            this.next();
         } else {
-            this._logger?.onResume(this.flow.name);
-            this.flow?.resume();
+            this._logger?.onResume(this.currentFlow.name);
+            this.currentFlow?.resume();
         }
     }
 
     public emit(signal: string): void {
-        this.flow?.emit(signal);
+        this.currentFlow?.emit(signal);
     }
 
     public onSignal(signal: string, handler: () => void): void {
-        this.flow?.onSignal(signal, handler);
+        this.currentFlow?.onSignal(signal, handler);
     }
 
     public switchTo(flow: StateFlow): void {
-        this._logger?.onSwitch(flow.name);
-        this.flow?.cancel();
-        if (this.flow?.suspended) {
+        const completed = this.currentFlow?.completed;
+        this.currentFlow?.cancel();
+        if (this.currentFlow?.suspended) {
             this.suspendedFlow = flow;
         } else {
-            this.flow = flow;
-            this.flow.launch(this);
+            this.nextFlow = flow;
+        }
+        if (!this.currentFlow || completed) {
+            this._logger?.onSwitch(flow.name);
+            this.next();
+        }
+    }
+
+    private async next(): Promise<void> {
+        if (!this.nextFlow) { return; }
+        this.currentFlow = this.nextFlow;
+        this.nextFlow = undefined;
+        await this.currentFlow.launch(this);
+        if (this.nextFlow) {
+            this._logger?.onSwitch(this.nextFlow.name);
+            this.next();
         }
     }
 }
