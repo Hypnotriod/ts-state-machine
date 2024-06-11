@@ -46,10 +46,10 @@ const flow1 = () => new StateFlow(
             flow.switchTo(alternativeFlow());
         });
     },
-    [
+    StateFlow.inSequence(
         t => timeout(t, 1000),
         t => timeout(t, 1500),
-    ],
+    ),
     flow => {
         console.log("End Flow1");
         flow.switchTo(flow2());
@@ -69,16 +69,17 @@ const flow2 = () => new StateFlow(
             flow.switchTo(alternativeFlow());
         });
     },
-    [
-        [
+    StateFlow.inParallel(
+        t => timeout(t, 4500),
+        StateFlow.inSequence(
             t => timeout(t, 1000),
             t => timeout(t, 1500),
-        ],
-        [
+        ),
+        StateFlow.inSequence(
             t => timeout(t, 500),
             t => timeout(t, 2500),
-        ],
-    ],
+        ),
+    ),
     _ => {
         console.log("End Flow2");
     },

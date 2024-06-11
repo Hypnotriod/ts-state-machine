@@ -13,6 +13,20 @@ export default class StateFlow {
     private token: StateTokenHandler = new StateTokenHandler();
     private _name!: string;
 
+    public static inParallel(...actions: (FlowAction | FlowActions)[]): ParallelFlowActions {
+        return actions.map(actions => {
+            if (StateFlow.isSingleAction(actions)) {
+                return [actions];
+            } else {
+                return actions;
+            }
+        }, []);
+    }
+
+    public static inSequence(...actions: FlowAction[]): FlowActions {
+        return actions;
+    }
+
     constructor(
         name: string,
         before?: (handler: StateFlowHandler) => void,
@@ -68,9 +82,9 @@ export default class StateFlow {
         if (this.token.completed) { return; }
         if (this.actions && this.actions.length) {
             const dequeuedActions: Array<Promise<void>> = [];
-            if (this.isSingleAction(this.actions)) {
+            if (StateFlow.isSingleAction(this.actions)) {
                 dequeuedActions.push(this.dequeueActions([this.actions]));
-            } else if (this.areParallel(this.actions)) {
+            } else if (StateFlow.areParallel(this.actions)) {
                 for (const actions of this.actions) {
                     dequeuedActions.push(this.dequeueActions(actions));
                 }
@@ -85,12 +99,12 @@ export default class StateFlow {
         this.token.complete();
     }
 
-    private isSingleAction(actions: ParallelFlowActions | FlowActions | FlowAction): actions is FlowAction {
+    private static isSingleAction(actions: ParallelFlowActions | FlowActions | FlowAction): actions is FlowAction {
         return actions instanceof Function;
     }
 
-    private areParallel(actions: ParallelFlowActions | FlowActions | FlowAction): actions is ParallelFlowActions {
-        return Array.isArray(this.actions) && Array.isArray(this.actions[0]);
+    private static areParallel(actions: ParallelFlowActions | FlowActions | FlowAction): actions is ParallelFlowActions {
+        return Array.isArray(actions) && Array.isArray(actions[0]);
     }
 
     private dequeueActions = (actions: FlowActions) => new Promise<void>((resolve) => {
