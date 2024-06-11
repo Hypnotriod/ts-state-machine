@@ -1,6 +1,7 @@
 import StateFlow from "./StateFlow";
 
 export interface StateFlowHandler {
+    currentStateName: string;
     suspended: boolean;
     cancelled: boolean;
     completed: boolean;
@@ -8,12 +9,24 @@ export interface StateFlowHandler {
     suspend(): void;
     resume(): void;
     onSignal(signal: string, handler: () => void): void;
-    next(flow: StateFlow): void;
+    switchTo(flow: StateFlow): void;
+}
+
+export interface StateFlowLogger {
+    onCancel(name: string): void;
+    onSuspend(name: string): void;
+    onResume(name: string): void;
+    onSwitch(name: string): void;
 }
 
 export default class StateMachine implements StateFlowHandler {
     private flow?: StateFlow;
     private suspendedFlow?: StateFlow;
+    private _logger?: StateFlowLogger;
+
+    public get currentStateName(): string {
+        return this.flow?.name || "";
+    }
 
     public get cancelled(): boolean {
         return this.flow?.cancelled;
@@ -27,11 +40,17 @@ export default class StateMachine implements StateFlowHandler {
         return this.flow?.completed;
     }
 
+    public set logger(logger: StateFlowLogger) {
+        this._logger = logger;
+    }
+
     public cancel(): void {
+        this._logger?.onCancel(this.currentStateName);
         this.flow?.cancel();
     }
 
     public suspend(): void {
+        this._logger?.onSuspend(this.currentStateName);
         this.flow?.suspend();
     }
 
@@ -39,8 +58,10 @@ export default class StateMachine implements StateFlowHandler {
         if (this.suspendedFlow) {
             this.flow = this.suspendedFlow;
             this.suspendedFlow = undefined;
+            this._logger?.onResume(this.flow.name);
             this.flow.launch(this);
         } else {
+            this._logger?.onResume(this.flow.name);
             this.flow?.resume();
         }
     }
@@ -53,7 +74,8 @@ export default class StateMachine implements StateFlowHandler {
         this.flow?.onSignal(signal, handler);
     }
 
-    public next(flow: StateFlow): void {
+    public switchTo(flow: StateFlow): void {
+        this._logger?.onSwitch(flow.name);
         this.flow?.cancel();
         if (this.flow?.suspended) {
             this.suspendedFlow = flow;

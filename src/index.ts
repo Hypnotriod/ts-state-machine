@@ -35,37 +35,39 @@ const SIGNAL_CANCEL = "Cancel";
 const SIGNAL_DEVIATE = "Deviate";
 
 const flow1 = () => new StateFlow(
-    handler => {
-        console.log("Start Flow1");
-        handler.onSignal(SIGNAL_CANCEL, () => {
+    "Flow 1",
+    flow => {
+        console.log(`Start Flow1`);
+        flow.onSignal(SIGNAL_CANCEL, () => {
             console.log("Cancel Flow1 by signal");
-            handler.cancel();
+            flow.cancel();
         });
-        handler.onSignal(SIGNAL_DEVIATE, () => {
+        flow.onSignal(SIGNAL_DEVIATE, () => {
             console.log("Deviate Flow1");
-            handler.next(alternativeFlow());
+            flow.switchTo(alternativeFlow());
         });
     },
     [
         t => timeout(t, 1000),
         t => timeout(t, 1500),
     ],
-    handler => {
+    flow => {
         console.log("End Flow1");
-        handler.next(flow2());
+        flow.switchTo(flow2());
     },
 );
 
 const flow2 = () => new StateFlow(
-    handler => {
+    "Flow 2",
+    flow => {
         console.log("Start Flow2");
-        handler.onSignal(SIGNAL_CANCEL, () => {
+        flow.onSignal(SIGNAL_CANCEL, () => {
             console.log("Cancel Flow2 by signal");
-            handler.cancel();
+            flow.cancel();
         });
-        handler.onSignal(SIGNAL_DEVIATE, () => {
+        flow.onSignal(SIGNAL_DEVIATE, () => {
             console.log("Deviate Flow2");
-            handler.next(alternativeFlow());
+            flow.switchTo(alternativeFlow());
         });
     },
     [
@@ -84,15 +86,16 @@ const flow2 = () => new StateFlow(
 );
 
 const alternativeFlow = () => new StateFlow(
-    handler => {
+    "Alternative Flow",
+    flow => {
         console.log("Start Alternative Flow");
-        handler.onSignal(SIGNAL_CANCEL, () => {
+        flow.onSignal(SIGNAL_CANCEL, () => {
             console.log("Cancel Alternative Flow");
-            handler.cancel();
+            flow.cancel();
         });
-        handler.onSignal(SIGNAL_DEVIATE, () => {
+        flow.onSignal(SIGNAL_DEVIATE, () => {
             console.log("Deviate Alternative Flow");
-            handler.next(alternativeFlow());
+            flow.switchTo(alternativeFlow());
         });
     },
     t => timeout(t, 1200),
@@ -101,7 +104,13 @@ const alternativeFlow = () => new StateFlow(
     },
 );
 
-stateMachine.next(flow1());
+stateMachine.logger = {
+    onCancel: name => console.log(`Cancel => ${name}`),
+    onSuspend: name => console.log(`Suspend => ${name}`),
+    onResume: name => console.log(`Resume => ${name}`),
+    onSwitch: name => console.log(`Switch to => ${name}`),
+};
+stateMachine.switchTo(flow1());
 
 document.getElementById("btn-suspend").onclick = () => stateMachine.suspend();
 document.getElementById("btn-resume").onclick = () => stateMachine.resume();

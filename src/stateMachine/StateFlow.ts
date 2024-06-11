@@ -11,15 +11,22 @@ export default class StateFlow {
     private actions?: ParallelFlowActions | FlowActions | FlowAction;
     private after?: (handler: StateFlowHandler) => void;
     private token: StateTokenHandler = new StateTokenHandler();
+    private _name!: string;
 
     constructor(
+        name: string,
         before?: (handler: StateFlowHandler) => void,
         actions?: ParallelFlowActions | FlowActions | FlowAction,
         after?: (handler: StateFlowHandler) => void,
     ) {
+        this._name = name;
         this.before = before;
         this.actions = actions;
         this.after = after;
+    }
+
+    public get name(): string {
+        return this._name;
     }
 
     public get cancelled(): boolean {

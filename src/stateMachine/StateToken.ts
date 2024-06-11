@@ -1,7 +1,7 @@
 export default interface StateToken {
-    get cancelled(): boolean;
-    get suspended(): boolean;
-    get completed(): boolean;
+    cancelled: boolean;
+    suspended: boolean;
+    completed: boolean;
     onCancel(callback: () => void): void;
     onSuspend(callback: () => void): void;
     onResume(callback: () => void): void;
