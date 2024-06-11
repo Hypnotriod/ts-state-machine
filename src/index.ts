@@ -37,7 +37,7 @@ const SIGNAL_DEVIATE = "Deviate";
 const flow1 = () => new StateFlow(
     "Flow 1",
     flow => {
-        console.log(`Start Flow1`);
+        console.log("Start Flow1");
         flow.onSignal(SIGNAL_CANCEL, () => {
             console.log("Cancel Flow1 by signal");
             flow.cancel();
