@@ -1,4 +1,13 @@
-export default class StateToken {
+export default interface StateToken {
+    get cancelled(): boolean;
+    get suspended(): boolean;
+    get completed(): boolean;
+    onCancel(callback: () => void): void;
+    onSuspend(callback: () => void): void;
+    onResume(callback: () => void): void;
+}
+
+export class StateTokenHandler implements StateToken {
     private cancelCallbacks: Array<() => void> = [];
     private suspendCallbacks: Array<() => void> = [];
     private resumeCallbacks: Array<() => void> = [];

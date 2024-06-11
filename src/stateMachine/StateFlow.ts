@@ -1,5 +1,5 @@
 import StateMachine, { StateFlowHandler } from "./StateMachine";
-import StateToken from "./StateToken";
+import StateToken, { StateTokenHandler } from "./StateToken";
 
 export type StateTasks = Array<(token: StateToken) => Promise<void>>;
 export type StateTasksQueue = Array<StateTasks>;
@@ -9,7 +9,7 @@ export default class StateFlow {
     private before?: (handler: StateFlowHandler) => void;
     private tasks?: StateTasksQueue | StateTasks;
     private after?: (handler: StateFlowHandler) => void;
-    private token: StateToken = new StateToken();
+    private token: StateTokenHandler = new StateTokenHandler();
 
     constructor(
         before?: (handler: StateFlowHandler) => void,
@@ -81,10 +81,10 @@ export default class StateFlow {
 
     private dequeueTasks = (tasks: StateTasks) => new Promise<void>((resolve) => {
         let neddToResume: boolean = false;
-        let token: StateToken;
+        let token: StateTokenHandler;
         const nextTask = async () => {
             while (tasks.length && this.token && !this.token.cancelled) {
-                token = new StateToken();
+                token = new StateTokenHandler();
                 const task = tasks.shift();
                 try {
                     await task(token);

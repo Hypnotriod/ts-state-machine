@@ -2,7 +2,7 @@ import StateToken from "./stateMachine/StateToken";
 import StateFlow from "./stateMachine/StateFlow";
 import StateMachine from "./stateMachine/StateMachine";
 
-const timeout = (ctx: StateToken, timeoutMs: number) => new Promise<void>((resolve, reject) => {
+const timeout = (token: StateToken, timeoutMs: number) => new Promise<void>((resolve, reject) => {
     let timestamp: number;
     let timeoutId: NodeJS.Timeout;
     const start = () => {
@@ -12,17 +12,17 @@ const timeout = (ctx: StateToken, timeoutMs: number) => new Promise<void>((resol
             resolve();
         }, Math.max(timeoutMs, 0));
     }
-    ctx.onCancel(() => {
+    token.onCancel(() => {
         console.log(`Cancel timeout ${timeoutId}`);
         clearTimeout(timeoutId);
         reject();
     });
-    ctx.onSuspend(() => {
+    token.onSuspend(() => {
         clearTimeout(timeoutId);
         console.log(`Suspend timeout ${timeoutId}`);
         timeoutMs -= Date.now() - timestamp;
     });
-    ctx.onResume(() => {
+    token.onResume(() => {
         start();
         console.log(`Resume timeout ${timeoutId} for ${timeoutMs} ms`);
     });
