@@ -31,15 +31,17 @@ const timeout = (token: StateToken, timeoutMs: number) => new Promise<void>((res
 });
 
 const stateMachine: StateMachine = new StateMachine();
+const SIGNAL_CANCEL = "Cancel";
+const SIGNAL_DEVIATE = "Deviate";
 
 const flow1 = () => new StateFlow(
     handler => {
         console.log("Start Flow1");
-        handler.onSignal("Cancel", () => {
+        handler.onSignal(SIGNAL_CANCEL, () => {
             console.log("Cancel Flow1 by signal");
             handler.cancel();
         });
-        handler.onSignal("Deviate", () => {
+        handler.onSignal(SIGNAL_DEVIATE, () => {
             console.log("Deviate Flow1");
             handler.next(alternativeFlow());
         });
@@ -57,11 +59,11 @@ const flow1 = () => new StateFlow(
 const flow2 = () => new StateFlow(
     handler => {
         console.log("Start Flow2");
-        handler.onSignal("Cancel", () => {
+        handler.onSignal(SIGNAL_CANCEL, () => {
             console.log("Cancel Flow2 by signal");
             handler.cancel();
         });
-        handler.onSignal("Deviate", () => {
+        handler.onSignal(SIGNAL_DEVIATE, () => {
             console.log("Deviate Flow2");
             handler.next(alternativeFlow());
         });
@@ -84,11 +86,11 @@ const flow2 = () => new StateFlow(
 const alternativeFlow = () => new StateFlow(
     handler => {
         console.log("Start Alternative Flow");
-        handler.onSignal("Cancel", () => {
+        handler.onSignal(SIGNAL_CANCEL, () => {
             console.log("Cancel Alternative Flow");
             handler.cancel();
         });
-        handler.onSignal("Deviate", () => {
+        handler.onSignal(SIGNAL_DEVIATE, () => {
             console.log("Deviate Alternative Flow");
             handler.next(alternativeFlow());
         });
@@ -105,5 +107,5 @@ stateMachine.next(flow1());
 
 document.getElementById("btn-suspend").onclick = () => stateMachine.suspend();
 document.getElementById("btn-resume").onclick = () => stateMachine.resume();
-document.getElementById("btn-emit-cancel").onclick = () => stateMachine.emit("Cancel");
-document.getElementById("btn-emit-deviate").onclick = () => stateMachine.emit("Deviate");
+document.getElementById("btn-emit-cancel").onclick = () => stateMachine.emit(SIGNAL_CANCEL);
+document.getElementById("btn-emit-deviate").onclick = () => stateMachine.emit(SIGNAL_DEVIATE);
