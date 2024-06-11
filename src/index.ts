@@ -95,9 +95,7 @@ const alternativeFlow = () => new StateFlow(
             handler.next(alternativeFlow());
         });
     },
-    [
-        t => timeout(t, 1000),
-    ],
+    t => timeout(t, 1200),
     _ => {
         console.log("End Alternative Flow");
     },
