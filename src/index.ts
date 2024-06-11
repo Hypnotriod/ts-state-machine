@@ -2,6 +2,9 @@ import StateToken from "./stateMachine/StateToken";
 import StateFlow from "./stateMachine/StateFlow";
 import StateMachine from "./stateMachine/StateMachine";
 
+const SIGNAL_CANCEL = "Cancel";
+const SIGNAL_DEVIATE = "Deviate";
+
 const timeout = (token: StateToken, timeoutMs: number) => new Promise<void>((resolve, reject) => {
     let timestamp: number;
     let timeoutId: NodeJS.Timeout;
@@ -29,10 +32,6 @@ const timeout = (token: StateToken, timeoutMs: number) => new Promise<void>((res
     start();
     console.log(`Start timeout ${timeoutId} for ${timeoutMs} ms`);
 });
-
-const stateMachine: StateMachine = new StateMachine();
-const SIGNAL_CANCEL = "Cancel";
-const SIGNAL_DEVIATE = "Deviate";
 
 const flow1 = () => new StateFlow(
     "Flow 1",
@@ -104,6 +103,7 @@ const alternativeFlow = () => new StateFlow(
     },
 );
 
+const stateMachine: StateMachine = new StateMachine();
 stateMachine.logger = {
     onCancel: name => console.log(`Cancel => ${name}`),
     onSuspend: name => console.log(`Suspend => ${name}`),
