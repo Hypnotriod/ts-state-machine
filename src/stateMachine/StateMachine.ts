@@ -16,6 +16,7 @@ export interface StateFlowLogger {
     onCancel(name: string): void;
     onSuspend(name: string): void;
     onResume(name: string): void;
+    onSignal(name: string, signal: string): void;
     onSwitch(name: string): void;
 }
 
@@ -62,12 +63,13 @@ export default class StateMachine implements StateFlowHandler {
             this._logger?.onResume(this.nextFlow.name);
             this.next();
         } else {
-            this._logger?.onResume(this.currentFlow.name);
+            this._logger?.onResume(this.currentStateName);
             this.currentFlow?.resume();
         }
     }
 
     public emit(signal: string): void {
+        this._logger?.onSignal(this.currentStateName, signal);
         this.currentFlow?.emit(signal);
     }
 
@@ -78,25 +80,25 @@ export default class StateMachine implements StateFlowHandler {
     public switchTo(flow: StateFlow): void {
         const completed = this.currentFlow?.completed;
         this.currentFlow?.cancel();
+        this.suspendedFlow = undefined;
+        this.nextFlow = undefined;
         if (this.currentFlow?.suspended) {
             this.suspendedFlow = flow;
         } else {
             this.nextFlow = flow;
         }
-        if (!this.currentFlow || completed) {
+        if (!this.currentFlow || this.nextFlow && completed) {
             this._logger?.onSwitch(flow.name);
             this.next();
         }
     }
 
     private async next(): Promise<void> {
-        if (!this.nextFlow) { return; }
         this.currentFlow = this.nextFlow;
         this.nextFlow = undefined;
         await this.currentFlow.launch(this);
-        if (this.nextFlow) {
-            this._logger?.onSwitch(this.nextFlow.name);
-            this.next();
-        }
+        if (!this.nextFlow) { return; }
+        this._logger?.onSwitch(this.nextFlow.name);
+        this.next();
     }
 }

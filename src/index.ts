@@ -109,6 +109,7 @@ stateMachine.logger = {
     onCancel: name => console.log(`Cancel => ${name}`),
     onSuspend: name => console.log(`Suspend => ${name}`),
     onResume: name => console.log(`Resume => ${name}`),
+    onSignal: (name, signal) => console.log(`Signal => ${name} => ${signal}`),
     onSwitch: name => console.log(`Switch to => ${name}`),
 };
 stateMachine.switchTo(flow1());

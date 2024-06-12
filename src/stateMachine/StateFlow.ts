@@ -56,8 +56,8 @@ export default class StateFlow {
     }
 
     public cancel(): void {
+        this.drain();
         this.token.cancel();
-        this.listeners = {};
     }
 
     public suspend(): void {
@@ -135,4 +135,8 @@ export default class StateFlow {
         });
         nextAction();
     });
+
+    private drain(): void {
+        this.listeners = {};
+    }
 }
