@@ -61,7 +61,7 @@ export default class StateMachine implements StateFlowHandler {
             this.nextFlow = this.suspendedFlow;
             this.suspendedFlow = undefined;
             this._logger?.onResume(this.nextFlow.name);
-            this.next();
+            this.run();
         } else {
             this._logger?.onResume(this.currentStateName);
             this.currentFlow?.resume();
@@ -89,16 +89,18 @@ export default class StateMachine implements StateFlowHandler {
         }
         if (!this.currentFlow || this.nextFlow && completed) {
             this._logger?.onSwitch(flow.name);
-            this.next();
+            this.run();
         }
     }
 
-    private async next(): Promise<void> {
-        this.currentFlow = this.nextFlow;
-        this.nextFlow = undefined;
-        await this.currentFlow.launch(this);
+    private async run(): Promise<void> {
         if (!this.nextFlow) { return; }
-        this._logger?.onSwitch(this.nextFlow.name);
-        this.next();
+        while (true) {
+            this.currentFlow = this.nextFlow;
+            this.nextFlow = undefined;
+            await this.currentFlow.launch(this);
+            if (!this.nextFlow) { return; }
+            this._logger?.onSwitch(this.nextFlow.name);
+        }
     }
 }
