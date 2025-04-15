@@ -1,4 +1,4 @@
-import StateFlow from "./StateFlow";
+import { StateFlow } from './StateFlow';
 
 export interface StateFlowHandler {
     currentStateName: string;
@@ -20,14 +20,14 @@ export interface StateFlowLogger {
     onSwitch(name: string): void;
 }
 
-export default class StateMachine implements StateFlowHandler {
+export class StateMachine implements StateFlowHandler {
     private currentFlow?: StateFlow;
     private nextFlow?: StateFlow;
     private suspendedFlow?: StateFlow;
     private _logger?: StateFlowLogger;
 
     public get currentStateName(): string {
-        return this.currentFlow?.name || "";
+        return this.currentFlow?.name || '';
     }
 
     public get cancelled(): boolean {

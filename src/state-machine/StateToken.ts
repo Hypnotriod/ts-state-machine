@@ -1,4 +1,4 @@
-export default interface StateToken {
+export interface StateToken {
     cancelled: boolean;
     suspended: boolean;
     completed: boolean;
@@ -55,7 +55,6 @@ export class StateTokenHandler implements StateToken {
         if (this._suspended) { return; }
         this.suspendCallbacks.push(callback);
     }
-
 
     public resume(): void {
         if (!this._suspended) { return; }

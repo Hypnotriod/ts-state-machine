@@ -1,11 +1,11 @@
-import StateMachine, { StateFlowHandler } from "./StateMachine";
-import StateToken, { StateTokenHandler } from "./StateToken";
+import { StateMachine, StateFlowHandler } from './StateMachine';
+import { StateToken, StateTokenHandler } from './StateToken';
 
 export type FlowAction = (token: StateToken) => Promise<void>;
 export type FlowActions = Array<FlowAction>;
 export type ParallelFlowActions = Array<FlowActions>;
 
-export default class StateFlow {
+export class StateFlow {
     private listeners: { [key: string]: () => void } = {};
     private before?: (handler: StateFlowHandler) => void;
     private actions?: ParallelFlowActions | FlowActions | FlowAction;
@@ -114,9 +114,7 @@ export default class StateFlow {
             while (actions.length && this.token && !this.token.cancelled) {
                 token = new StateTokenHandler();
                 const action = actions.shift();
-                try {
-                    await action(token);
-                } catch (e) { }
+                await action(token);
                 if (token.suspended) {
                     token = undefined;
                     neddToResume = true;

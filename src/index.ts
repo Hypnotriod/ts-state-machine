@@ -1,11 +1,9 @@
-import StateToken from "./stateMachine/StateToken";
-import StateFlow from "./stateMachine/StateFlow";
-import StateMachine from "./stateMachine/StateMachine";
+import { StateFlow, StateMachine, StateToken } from './state-machine';
 
-const SIGNAL_CANCEL = "Cancel";
-const SIGNAL_DEVIATE = "Deviate";
+const SIGNAL_CANCEL = 'Cancel';
+const SIGNAL_DEVIATE = 'Deviate';
 
-const timeout = (token: StateToken, timeoutMs: number) => new Promise<void>((resolve, reject) => {
+const timeout = (token: StateToken, timeoutMs: number) => new Promise<void>((resolve) => {
     let timestamp: number;
     let timeoutId: NodeJS.Timeout;
     const start = () => {
@@ -18,55 +16,55 @@ const timeout = (token: StateToken, timeoutMs: number) => new Promise<void>((res
     token.onCancel(() => {
         console.log(`Cancel timeout ${timeoutId}`);
         clearTimeout(timeoutId);
-        reject();
+        resolve();
     });
     token.onSuspend(() => {
         clearTimeout(timeoutId);
-        console.log(`Suspend timeout ${timeoutId}`);
         timeoutMs -= Date.now() - timestamp;
+        console.log(`Suspend timeout ${timeoutId} with ${timeoutMs} ms left`);
     });
     token.onResume(() => {
         start();
-        console.log(`Resume timeout ${timeoutId} for ${timeoutMs} ms`);
+        console.log(`Resume as timeout ${timeoutId} with ${timeoutMs} ms left`);
     });
     start();
     console.log(`Start timeout ${timeoutId} for ${timeoutMs} ms`);
 });
 
 const flow1 = () => new StateFlow(
-    "Flow 1",
-    flow => {
-        console.log("Start Flow1");
-        flow.onSignal(SIGNAL_CANCEL, () => {
-            console.log("Cancel Flow1 by signal");
-            flow.cancel();
+    'Flow 1',
+    state => {
+        console.log('Start Flow1');
+        state.onSignal(SIGNAL_CANCEL, () => {
+            console.log('Cancel Flow1 by signal');
+            state.cancel();
         });
-        flow.onSignal(SIGNAL_DEVIATE, () => {
-            console.log("Deviate Flow1");
-            flow.switchTo(alternativeFlow());
+        state.onSignal(SIGNAL_DEVIATE, () => {
+            console.log('Deviate Flow1');
+            state.switchTo(alternativeFlow());
         });
     },
     StateFlow.inSequence(
         t => timeout(t, 1000),
         t => timeout(t, 1500),
     ),
-    flow => {
-        console.log("End Flow1");
-        flow.switchTo(flow2());
+    state => {
+        console.log('End Flow1');
+        state.switchTo(flow2());
     },
 );
 
 const flow2 = () => new StateFlow(
-    "Flow 2",
-    flow => {
-        console.log("Start Flow2");
-        flow.onSignal(SIGNAL_CANCEL, () => {
-            console.log("Cancel Flow2 by signal");
-            flow.cancel();
+    'Flow 2',
+    state => {
+        console.log('Start Flow2');
+        state.onSignal(SIGNAL_CANCEL, () => {
+            console.log('Cancel Flow2 by signal');
+            state.cancel();
         });
-        flow.onSignal(SIGNAL_DEVIATE, () => {
-            console.log("Deviate Flow2");
-            flow.switchTo(alternativeFlow());
+        state.onSignal(SIGNAL_DEVIATE, () => {
+            console.log('Deviate Flow2');
+            state.switchTo(alternativeFlow());
         });
     },
     StateFlow.inParallel(
@@ -81,26 +79,26 @@ const flow2 = () => new StateFlow(
         ),
     ),
     _ => {
-        console.log("End Flow2");
+        console.log('End Flow2');
     },
 );
 
 const alternativeFlow = () => new StateFlow(
-    "Alternative Flow",
-    flow => {
-        console.log("Start Alternative Flow");
-        flow.onSignal(SIGNAL_CANCEL, () => {
-            console.log("Cancel Alternative Flow");
-            flow.cancel();
+    'Alternative Flow',
+    state => {
+        console.log('Start Alternative Flow');
+        state.onSignal(SIGNAL_CANCEL, () => {
+            console.log('Cancel Alternative Flow');
+            state.cancel();
         });
-        flow.onSignal(SIGNAL_DEVIATE, () => {
-            console.log("Deviate Alternative Flow");
-            flow.switchTo(alternativeFlow());
+        state.onSignal(SIGNAL_DEVIATE, () => {
+            console.log('Deviate Alternative Flow');
+            state.switchTo(alternativeFlow());
         });
     },
     t => timeout(t, 1200),
     _ => {
-        console.log("End Alternative Flow");
+        console.log('End Alternative Flow');
     },
 );
 
@@ -114,7 +112,7 @@ stateMachine.logger = {
 };
 stateMachine.switchTo(flow1());
 
-document.getElementById("btn-suspend").onclick = () => stateMachine.suspend();
-document.getElementById("btn-resume").onclick = () => stateMachine.resume();
-document.getElementById("btn-emit-cancel").onclick = () => stateMachine.emit(SIGNAL_CANCEL);
-document.getElementById("btn-emit-deviate").onclick = () => stateMachine.emit(SIGNAL_DEVIATE);
+document.getElementById('btn-suspend').onclick = () => stateMachine.suspend();
+document.getElementById('btn-resume').onclick = () => stateMachine.resume();
+document.getElementById('btn-emit-cancel').onclick = () => stateMachine.emit(SIGNAL_CANCEL);
+document.getElementById('btn-emit-deviate').onclick = () => stateMachine.emit(SIGNAL_DEVIATE);
