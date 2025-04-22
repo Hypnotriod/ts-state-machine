@@ -5,33 +5,41 @@ export type FlowAction = (token: StateToken) => Promise<void>;
 export type FlowActions = Array<FlowAction>;
 export type ParallelFlowActions = Array<FlowActions>;
 
+const isSingleAction = (actions: ParallelFlowActions | FlowActions | FlowAction): actions is FlowAction => {
+    return actions instanceof Function;
+}
+
+const areParallel = (actions: ParallelFlowActions | FlowActions | FlowAction): actions is ParallelFlowActions => {
+    return Array.isArray(actions) && Array.isArray(actions[0]);
+}
+
+export const inParallel = (...actions: (FlowAction | FlowActions)[]): ParallelFlowActions => {
+    return actions.map(actions => {
+        if (isSingleAction(actions)) {
+            return [actions];
+        } else {
+            return actions;
+        }
+    }, []);
+}
+
+export const inSequence = (...actions: FlowAction[]): FlowActions => {
+    return actions;
+}
+
 export class StateFlow {
-    private listeners: { [key: string]: () => void } = {};
-    private before?: (handler: StateFlowHandler) => void;
+    private listeners: { [key: string]: () => StateFlow | void } = {};
+    private before?: (handler: StateFlowHandler) => StateFlow | void;
     private actions?: ParallelFlowActions | FlowActions | FlowAction;
-    private after?: (handler: StateFlowHandler) => void;
+    private after?: (handler: StateFlowHandler) => StateFlow | void;
     private token: StateTokenHandler = new StateTokenHandler();
     private _name!: string;
 
-    public static inParallel(...actions: (FlowAction | FlowActions)[]): ParallelFlowActions {
-        return actions.map(actions => {
-            if (StateFlow.isSingleAction(actions)) {
-                return [actions];
-            } else {
-                return actions;
-            }
-        }, []);
-    }
-
-    public static inSequence(...actions: FlowAction[]): FlowActions {
-        return actions;
-    }
-
     constructor(
         name: string,
-        before?: (handler: StateFlowHandler) => void,
+        before?: (handler: StateFlowHandler) => StateFlow | void,
         actions?: ParallelFlowActions | FlowActions | FlowAction,
-        after?: (handler: StateFlowHandler) => void,
+        after?: (handler: StateFlowHandler) => StateFlow | void,
     ) {
         this._name = name;
         this.before = before;
@@ -68,23 +76,27 @@ export class StateFlow {
         this.token.resume();
     }
 
-    public emit(signal: string): void {
-        this.listeners[signal]?.();
+    public emit(signal: string): StateFlow | void {
+        return this.listeners[signal]?.();
     }
 
-    public onSignal(signal: string, handler: () => void): void {
+    public onSignal(signal: string, handler: () => StateFlow | void): void {
         this.listeners[signal] = handler;
     }
 
     public async launch(stateMachine: StateMachine): Promise<void> {
         if (this.token.completed) { return; }
-        this.before?.(stateMachine);
+        const flow = this.before?.(stateMachine);
+        if (flow) {
+            stateMachine.switchTo(flow);
+            return;
+        }
         if (this.token.completed) { return; }
         if (this.actions && this.actions.length) {
             const dequeuedActions: Array<Promise<void>> = [];
-            if (StateFlow.isSingleAction(this.actions)) {
+            if (isSingleAction(this.actions)) {
                 dequeuedActions.push(this.dequeueActions([this.actions]));
-            } else if (StateFlow.areParallel(this.actions)) {
+            } else if (areParallel(this.actions)) {
                 for (const actions of this.actions) {
                     dequeuedActions.push(this.dequeueActions(actions));
                 }
@@ -94,17 +106,13 @@ export class StateFlow {
             await Promise.all(dequeuedActions);
         }
         if (!this.token.completed && this.after) {
-            this.after(stateMachine);
+            const flow = this.after(stateMachine);
+            if (flow) {
+                stateMachine.switchTo(flow);
+                return;
+            }
         }
         this.token.complete();
-    }
-
-    private static isSingleAction(actions: ParallelFlowActions | FlowActions | FlowAction): actions is FlowAction {
-        return actions instanceof Function;
-    }
-
-    private static areParallel(actions: ParallelFlowActions | FlowActions | FlowAction): actions is ParallelFlowActions {
-        return Array.isArray(actions) && Array.isArray(actions[0]);
     }
 
     private dequeueActions = (actions: FlowActions) => new Promise<void>((resolve) => {

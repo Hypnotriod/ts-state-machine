@@ -8,8 +8,7 @@ export interface StateFlowHandler {
     cancel(): void;
     suspend(): void;
     resume(): void;
-    onSignal(signal: string, handler: () => void): void;
-    switchTo(flow: StateFlow): void;
+    onSignal(signal: string, handler: () => StateFlow | void): void;
 }
 
 export interface StateFlowLogger {
@@ -70,11 +69,12 @@ export class StateMachine implements StateFlowHandler {
 
     public emit(signal: string): void {
         this._logger?.onSignal(this.currentStateName, signal);
-        this.currentFlow?.emit(signal);
+        const state = this.currentFlow?.emit(signal);
+        if (state) { this.switchTo(state); }
     }
 
-    public onSignal(signal: string, handler: () => void): void {
-        this.currentFlow?.onSignal(signal, handler);
+    public onSignal(signal: string, handler: () => void): StateFlow | void {
+        return this.currentFlow?.onSignal(signal, handler);
     }
 
     public switchTo(flow: StateFlow): void {

@@ -1,4 +1,4 @@
-import { StateFlow, StateMachine, StateToken } from './state-machine';
+import { inParallel, inSequence, StateFlow, StateMachine, StateToken } from './state-machine';
 
 const SIGNAL_CANCEL = 'Cancel';
 const SIGNAL_DEVIATE = 'Deviate';
@@ -41,16 +41,16 @@ const flow1 = () => new StateFlow(
         });
         state.onSignal(SIGNAL_DEVIATE, () => {
             console.log('Deviate Flow1');
-            state.switchTo(alternativeFlow());
+            return alternativeFlow();
         });
     },
-    StateFlow.inSequence(
+    inSequence(
         t => timeout(t, 1000),
         t => timeout(t, 1500),
     ),
-    state => {
+    _ => {
         console.log('End Flow1');
-        state.switchTo(flow2());
+        return flow2();
     },
 );
 
@@ -64,16 +64,16 @@ const flow2 = () => new StateFlow(
         });
         state.onSignal(SIGNAL_DEVIATE, () => {
             console.log('Deviate Flow2');
-            state.switchTo(alternativeFlow());
+            return alternativeFlow();
         });
     },
-    StateFlow.inParallel(
+    inParallel(
         t => timeout(t, 4500),
-        StateFlow.inSequence(
+        inSequence(
             t => timeout(t, 1000),
             t => timeout(t, 1500),
         ),
-        StateFlow.inSequence(
+        inSequence(
             t => timeout(t, 500),
             t => timeout(t, 2500),
         ),
@@ -93,7 +93,7 @@ const alternativeFlow = () => new StateFlow(
         });
         state.onSignal(SIGNAL_DEVIATE, () => {
             console.log('Deviate Alternative Flow');
-            state.switchTo(alternativeFlow());
+            return alternativeFlow();
         });
     },
     t => timeout(t, 1200),
