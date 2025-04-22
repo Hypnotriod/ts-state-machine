@@ -69,8 +69,8 @@ export class StateMachine implements StateFlowHandler {
 
     public emit(signal: string): void {
         this._logger?.onSignal(this.currentStateName, signal);
-        const state = this.currentFlow?.emit(signal);
-        if (state) { this.switchTo(state); }
+        const nextFlow = this.currentFlow?.emit(signal);
+        if (nextFlow) { this.switchTo(nextFlow); }
     }
 
     public onSignal(signal: string, handler: () => void): StateFlow | void {

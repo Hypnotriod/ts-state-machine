@@ -33,13 +33,13 @@ const timeout = (token: StateToken, timeoutMs: number) => new Promise<void>((res
 
 const flow1 = () => new StateFlow(
     'Flow 1',
-    state => {
+    handler => {
         console.log('Start Flow1');
-        state.onSignal(SIGNAL_CANCEL, () => {
+        handler.onSignal(SIGNAL_CANCEL, () => {
             console.log('Cancel Flow1 by signal');
-            state.cancel();
+            handler.cancel();
         });
-        state.onSignal(SIGNAL_DEVIATE, () => {
+        handler.onSignal(SIGNAL_DEVIATE, () => {
             console.log('Deviate Flow1');
             return alternativeFlow();
         });
@@ -48,7 +48,7 @@ const flow1 = () => new StateFlow(
         t => timeout(t, 1000),
         t => timeout(t, 1500),
     ),
-    _ => {
+    () => {
         console.log('End Flow1');
         return flow2();
     },
@@ -56,13 +56,13 @@ const flow1 = () => new StateFlow(
 
 const flow2 = () => new StateFlow(
     'Flow 2',
-    state => {
+    handler => {
         console.log('Start Flow2');
-        state.onSignal(SIGNAL_CANCEL, () => {
+        handler.onSignal(SIGNAL_CANCEL, () => {
             console.log('Cancel Flow2 by signal');
-            state.cancel();
+            handler.cancel();
         });
-        state.onSignal(SIGNAL_DEVIATE, () => {
+        handler.onSignal(SIGNAL_DEVIATE, () => {
             console.log('Deviate Flow2');
             return alternativeFlow();
         });
@@ -78,26 +78,26 @@ const flow2 = () => new StateFlow(
             t => timeout(t, 2500),
         ),
     ),
-    _ => {
+    () => {
         console.log('End Flow2');
     },
 );
 
 const alternativeFlow = () => new StateFlow(
     'Alternative Flow',
-    state => {
+    handler => {
         console.log('Start Alternative Flow');
-        state.onSignal(SIGNAL_CANCEL, () => {
+        handler.onSignal(SIGNAL_CANCEL, () => {
             console.log('Cancel Alternative Flow');
-            state.cancel();
+            handler.cancel();
         });
-        state.onSignal(SIGNAL_DEVIATE, () => {
+        handler.onSignal(SIGNAL_DEVIATE, () => {
             console.log('Deviate Alternative Flow');
             return alternativeFlow();
         });
     },
     t => timeout(t, 1200),
-    _ => {
+    () => {
         console.log('End Alternative Flow');
     },
 );

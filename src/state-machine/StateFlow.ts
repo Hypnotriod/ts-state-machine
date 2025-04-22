@@ -31,7 +31,7 @@ export class StateFlow {
     private listeners: { [key: string]: () => StateFlow | void } = {};
     private before?: (handler: StateFlowHandler) => StateFlow | void;
     private actions?: ParallelFlowActions | FlowActions | FlowAction;
-    private after?: (handler: StateFlowHandler) => StateFlow | void;
+    private after?: () => StateFlow | void;
     private token: StateTokenHandler = new StateTokenHandler();
     private _name!: string;
 
@@ -39,7 +39,7 @@ export class StateFlow {
         name: string,
         before?: (handler: StateFlowHandler) => StateFlow | void,
         actions?: ParallelFlowActions | FlowActions | FlowAction,
-        after?: (handler: StateFlowHandler) => StateFlow | void,
+        after?: () => StateFlow | void,
     ) {
         this._name = name;
         this.before = before;
@@ -86,9 +86,9 @@ export class StateFlow {
 
     public async launch(stateMachine: StateMachine): Promise<void> {
         if (this.token.completed) { return; }
-        const flow = this.before?.(stateMachine);
-        if (flow) {
-            stateMachine.switchTo(flow);
+        let nextFlow = this.before?.(stateMachine);
+        if (nextFlow) {
+            stateMachine.switchTo(nextFlow);
             return;
         }
         if (this.token.completed) { return; }
@@ -106,9 +106,9 @@ export class StateFlow {
             await Promise.all(dequeuedActions);
         }
         if (!this.token.completed && this.after) {
-            const flow = this.after(stateMachine);
-            if (flow) {
-                stateMachine.switchTo(flow);
+            nextFlow = this.after();
+            if (nextFlow) {
+                stateMachine.switchTo(nextFlow);
                 return;
             }
         }
